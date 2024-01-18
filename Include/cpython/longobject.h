@@ -1,56 +1,97 @@
-#ifndef Py_CPYTHON_LONGOBJECT_H
-#  error "this header file must not be included directly"
+#ifndef Py_LONGOBJECT_H
+#define Py_LONGOBJECT_H
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-PyAPI_FUNC(PyObject*) PyLong_FromUnicodeObject(PyObject *u, int base);
 
-PyAPI_FUNC(int) PyUnstable_Long_IsCompact(const PyLongObject* op);
-PyAPI_FUNC(Py_ssize_t) PyUnstable_Long_CompactValue(const PyLongObject* op);
+/* Long (arbitrary precision) integer object interface */
 
-// _PyLong_Sign.  Return 0 if v is 0, -1 if v < 0, +1 if v > 0.
-// v must not be NULL, and must be a normalized long.
-// There are no error cases.
-PyAPI_FUNC(int) _PyLong_Sign(PyObject *v);
+// PyLong_Type is declared by object.h
 
-/* _PyLong_FromByteArray:  View the n unsigned bytes as a binary integer in
-   base 256, and return a Python int with the same numeric value.
-   If n is 0, the integer is 0.  Else:
-   If little_endian is 1/true, bytes[n-1] is the MSB and bytes[0] the LSB;
-   else (little_endian is 0/false) bytes[0] is the MSB and bytes[n-1] the
-   LSB.
-   If is_signed is 0/false, view the bytes as a non-negative integer.
-   If is_signed is 1/true, view the bytes as a 2's-complement integer,
-   non-negative if bit 0x80 of the MSB is clear, negative if set.
-   Error returns:
-   + Return NULL with the appropriate exception set if there's not
-     enough memory to create the Python int.
-*/
-PyAPI_FUNC(PyObject *) _PyLong_FromByteArray(
-    const unsigned char* bytes, size_t n,
-    int little_endian, int is_signed);
+#define PyLong_Check(op) \
+        PyType_FastSubclass(Py_TYPE(op), Py_TPFLAGS_LONG_SUBCLASS)
+#define PyLong_CheckExact(op) Py_IS_TYPE((op), &PyLong_Type)
 
-/* _PyLong_AsByteArray: Convert the least-significant 8*n bits of long
-   v to a base-256 integer, stored in array bytes.  Normally return 0,
-   return -1 on error.
-   If little_endian is 1/true, store the MSB at bytes[n-1] and the LSB at
-   bytes[0]; else (little_endian is 0/false) store the MSB at bytes[0] and
-   the LSB at bytes[n-1].
-   If is_signed is 0/false, it's an error if v < 0; else (v >= 0) n bytes
-   are filled and there's nothing special about bit 0x80 of the MSB.
-   If is_signed is 1/true, bytes is filled with the 2's-complement
-   representation of v's value.  Bit 0x80 of the MSB is the sign bit.
-   Error returns (-1):
-   + is_signed is 0 and v < 0.  TypeError is set in this case, and bytes
-     isn't altered.
-   + n isn't big enough to hold the full mathematical value of v.  For
-     example, if is_signed is 0 and there are more digits in the v than
-     fit in n; or if is_signed is 1, v < 0, and n is just 1 bit shy of
-     being large enough to hold a sign bit.  OverflowError is set in this
-     case, but bytes holds the least-significant n bytes of the true value.
-*/
-PyAPI_FUNC(int) _PyLong_AsByteArray(PyLongObject* v,
-    unsigned char* bytes, size_t n,
-    int little_endian, int is_signed);
+PyAPI_FUNC(PyObject *) PyLong_FromLong(long);
+PyAPI_FUNC(PyObject *) PyLong_FromUnsignedLong(unsigned long);
+PyAPI_FUNC(PyObject *) PyLong_FromSize_t(size_t);
+PyAPI_FUNC(PyObject *) PyLong_FromSsize_t(Py_ssize_t);
+PyAPI_FUNC(PyObject *) PyLong_FromDouble(double);
 
-/* For use by the gcd function in mathmodule.c */
-PyAPI_FUNC(PyObject *) _PyLong_GCD(PyObject *, PyObject *);
+PyAPI_FUNC(long) PyLong_AsLong(PyObject *);
+PyAPI_FUNC(long) PyLong_AsLongAndOverflow(PyObject *, int *);
+PyAPI_FUNC(Py_ssize_t) PyLong_AsSsize_t(PyObject *);
+PyAPI_FUNC(size_t) PyLong_AsSize_t(PyObject *);
+PyAPI_FUNC(unsigned long) PyLong_AsUnsignedLong(PyObject *);
+PyAPI_FUNC(unsigned long) PyLong_AsUnsignedLongMask(PyObject *);
+
+#if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x030d0000
+PyAPI_FUNC(int) PyLong_AsInt(PyObject *);
+#endif
+
+PyAPI_FUNC(PyObject *) PyLong_GetInfo(void);
+
+/* It may be useful in the future. I've added it in the PyInt -> PyLong
+   cleanup to keep the extra information. [CH] */
+#define PyLong_AS_LONG(op) PyLong_AsLong(op)
+
+/* Issue #1983: pid_t can be longer than a C long on some systems */
+#if !defined(SIZEOF_PID_T) || SIZEOF_PID_T == SIZEOF_INT
+#define _Py_PARSE_PID "i"
+#define PyLong_FromPid PyLong_FromLong
+#define PyLong_AsPid PyLong_AsLong
+#elif SIZEOF_PID_T == SIZEOF_LONG
+#define _Py_PARSE_PID "l"
+#define PyLong_FromPid PyLong_FromLong
+#define PyLong_AsPid PyLong_AsLong
+#elif defined(SIZEOF_LONG_LONG) && SIZEOF_PID_T == SIZEOF_LONG_LONG
+#define _Py_PARSE_PID "L"
+#define PyLong_FromPid PyLong_FromLongLong
+#define PyLong_AsPid PyLong_AsLongLong
+#else
+#error "sizeof(pid_t) is neither sizeof(int), sizeof(long) or sizeof(long long)"
+#endif /* SIZEOF_PID_T */
+
+#if SIZEOF_VOID_P == SIZEOF_INT
+#  define _Py_PARSE_INTPTR "i"
+#  define _Py_PARSE_UINTPTR "I"
+#elif SIZEOF_VOID_P == SIZEOF_LONG
+#  define _Py_PARSE_INTPTR "l"
+#  define _Py_PARSE_UINTPTR "k"
+#elif defined(SIZEOF_LONG_LONG) && SIZEOF_VOID_P == SIZEOF_LONG_LONG
+#  define _Py_PARSE_INTPTR "L"
+#  define _Py_PARSE_UINTPTR "K"
+#else
+#  error "void* different in size from int, long and long long"
+#endif /* SIZEOF_VOID_P */
+
+PyAPI_FUNC(double) PyLong_AsDouble(PyObject *);
+PyAPI_FUNC(PyObject *) PyLong_FromVoidPtr(void *);
+PyAPI_FUNC(void *) PyLong_AsVoidPtr(PyObject *);
+
+PyAPI_FUNC(PyObject *) PyLong_FromLongLong(long long);
+PyAPI_FUNC(PyObject *) PyLong_FromUnsignedLongLong(unsigned long long);
+PyAPI_FUNC(long long) PyLong_AsLongLong(PyObject *);
+PyAPI_FUNC(unsigned long long) PyLong_AsUnsignedLongLong(PyObject *);
+PyAPI_FUNC(unsigned long long) PyLong_AsUnsignedLongLongMask(PyObject *);
+PyAPI_FUNC(long long) PyLong_AsLongLongAndOverflow(PyObject *, int *);
+
+PyAPI_FUNC(PyObject *) PyLong_FromString(const char *, char **, int);
+
+/* These aren't really part of the int object, but they're handy. The
+   functions are in Python/mystrtoul.c.
+ */
+PyAPI_FUNC(unsigned long) PyOS_strtoul(const char *, char **, int);
+PyAPI_FUNC(long) PyOS_strtol(const char *, char **, int);
+
+#ifndef Py_LIMITED_API
+#  define Py_CPYTHON_LONGOBJECT_H
+#  include "cpython/longobject.h"
+#  undef Py_CPYTHON_LONGOBJECT_H
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* !Py_LONGOBJECT_H */

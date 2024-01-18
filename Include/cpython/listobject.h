@@ -1,49 +1,52 @@
-#ifndef Py_CPYTHON_LISTOBJECT_H
-#  error "this header file must not be included directly"
+/* List object interface
+
+   Another generally useful object type is a list of object pointers.
+   This is a mutable type: the list items can be changed, and items can be
+   added or removed. Out-of-range indices or non-list objects are ignored.
+
+   WARNING: PyList_SetItem does not increment the new item's reference count,
+   but does decrement the reference count of the item it replaces, if not nil.
+   It does *decrement* the reference count if it is *not* inserted in the list.
+   Similarly, PyList_GetItem does not increment the returned item's reference
+   count.
+*/
+
+#ifndef Py_LISTOBJECT_H
+#define Py_LISTOBJECT_H
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-typedef struct {
-    PyObject_VAR_HEAD
-    /* Vector of pointers to list elements.  list[0] is ob_item[0], etc. */
-    PyObject **ob_item;
+PyAPI_DATA(PyTypeObject) PyList_Type;
+PyAPI_DATA(PyTypeObject) PyListIter_Type;
+PyAPI_DATA(PyTypeObject) PyListRevIter_Type;
 
-    /* ob_item contains space for 'allocated' elements.  The number
-     * currently in use is ob_size.
-     * Invariants:
-     *     0 <= ob_size <= allocated
-     *     len(list) == ob_size
-     *     ob_item == NULL implies ob_size == allocated == 0
-     * list.sort() temporarily sets allocated to -1 to detect mutations.
-     *
-     * Items must normally not be NULL, except during construction when
-     * the list is not yet visible outside the function that builds it.
-     */
-    Py_ssize_t allocated;
-} PyListObject;
+#define PyList_Check(op) \
+    PyType_FastSubclass(Py_TYPE(op), Py_TPFLAGS_LIST_SUBCLASS)
+#define PyList_CheckExact(op) Py_IS_TYPE((op), &PyList_Type)
 
-/* Cast argument to PyListObject* type. */
-#define _PyList_CAST(op) \
-    (assert(PyList_Check(op)), _Py_CAST(PyListObject*, (op)))
+PyAPI_FUNC(PyObject *) PyList_New(Py_ssize_t size);
+PyAPI_FUNC(Py_ssize_t) PyList_Size(PyObject *);
 
-// Macros and static inline functions, trading safety for speed
+PyAPI_FUNC(PyObject *) PyList_GetItem(PyObject *, Py_ssize_t);
+PyAPI_FUNC(int) PyList_SetItem(PyObject *, Py_ssize_t, PyObject *);
+PyAPI_FUNC(int) PyList_Insert(PyObject *, Py_ssize_t, PyObject *);
+PyAPI_FUNC(int) PyList_Append(PyObject *, PyObject *);
 
-static inline Py_ssize_t PyList_GET_SIZE(PyObject *op) {
-    PyListObject *list = _PyList_CAST(op);
-    return Py_SIZE(list);
+PyAPI_FUNC(PyObject *) PyList_GetSlice(PyObject *, Py_ssize_t, Py_ssize_t);
+PyAPI_FUNC(int) PyList_SetSlice(PyObject *, Py_ssize_t, Py_ssize_t, PyObject *);
+
+PyAPI_FUNC(int) PyList_Sort(PyObject *);
+PyAPI_FUNC(int) PyList_Reverse(PyObject *);
+PyAPI_FUNC(PyObject *) PyList_AsTuple(PyObject *);
+
+#ifndef Py_LIMITED_API
+#  define Py_CPYTHON_LISTOBJECT_H
+#  include "cpython/listobject.h"
+#  undef Py_CPYTHON_LISTOBJECT_H
+#endif
+
+#ifdef __cplusplus
 }
-#define PyList_GET_SIZE(op) PyList_GET_SIZE(_PyObject_CAST(op))
-
-#define PyList_GET_ITEM(op, index) (_PyList_CAST(op)->ob_item[(index)])
-
-static inline void
-PyList_SET_ITEM(PyObject *op, Py_ssize_t index, PyObject *value) {
-    PyListObject *list = _PyList_CAST(op);
-    assert(0 <= index);
-    assert(index < list->allocated);
-    list->ob_item[index] = value;
-}
-#define PyList_SET_ITEM(op, index, value) \
-    PyList_SET_ITEM(_PyObject_CAST(op), (index), _PyObject_CAST(value))
-
-PyAPI_FUNC(int) PyList_Extend(PyObject *self, PyObject *iterable);
-PyAPI_FUNC(int) PyList_Clear(PyObject *self);
+#endif
+#endif /* !Py_LISTOBJECT_H */

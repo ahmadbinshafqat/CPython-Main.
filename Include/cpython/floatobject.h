@@ -1,27 +1,54 @@
-#ifndef Py_CPYTHON_FLOATOBJECT_H
-#  error "this header file must not be included directly"
+
+/* Float object interface */
+
+/*
+PyFloatObject represents a (double precision) floating point number.
+*/
+
+#ifndef Py_FLOATOBJECT_H
+#define Py_FLOATOBJECT_H
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-typedef struct {
-    PyObject_HEAD
-    double ob_fval;
-} PyFloatObject;
+PyAPI_DATA(PyTypeObject) PyFloat_Type;
 
-#define _PyFloat_CAST(op) \
-    (assert(PyFloat_Check(op)), _Py_CAST(PyFloatObject*, op))
+#define PyFloat_Check(op) PyObject_TypeCheck(op, &PyFloat_Type)
+#define PyFloat_CheckExact(op) Py_IS_TYPE((op), &PyFloat_Type)
 
-// Static inline version of PyFloat_AsDouble() trading safety for speed.
-// It doesn't check if op is a double object.
-static inline double PyFloat_AS_DOUBLE(PyObject *op) {
-    return _PyFloat_CAST(op)->ob_fval;
+#define Py_RETURN_NAN return PyFloat_FromDouble(Py_NAN)
+
+#define Py_RETURN_INF(sign)                          \
+    do {                                             \
+        if (copysign(1., sign) == 1.) {              \
+            return PyFloat_FromDouble(Py_HUGE_VAL);  \
+        }                                            \
+        else {                                       \
+            return PyFloat_FromDouble(-Py_HUGE_VAL); \
+        }                                            \
+    } while(0)
+
+PyAPI_FUNC(double) PyFloat_GetMax(void);
+PyAPI_FUNC(double) PyFloat_GetMin(void);
+PyAPI_FUNC(PyObject*) PyFloat_GetInfo(void);
+
+/* Return Python float from string PyObject. */
+PyAPI_FUNC(PyObject*) PyFloat_FromString(PyObject*);
+
+/* Return Python float from C double. */
+PyAPI_FUNC(PyObject*) PyFloat_FromDouble(double);
+
+/* Extract C double from Python float.  The macro version trades safety for
+   speed. */
+PyAPI_FUNC(double) PyFloat_AsDouble(PyObject*);
+
+#ifndef Py_LIMITED_API
+#  define Py_CPYTHON_FLOATOBJECT_H
+#  include "cpython/floatobject.h"
+#  undef Py_CPYTHON_FLOATOBJECT_H
+#endif
+
+#ifdef __cplusplus
 }
-#define PyFloat_AS_DOUBLE(op) PyFloat_AS_DOUBLE(_PyObject_CAST(op))
-
-
-PyAPI_FUNC(int) PyFloat_Pack2(double x, char *p, int le);
-PyAPI_FUNC(int) PyFloat_Pack4(double x, char *p, int le);
-PyAPI_FUNC(int) PyFloat_Pack8(double x, char *p, int le);
-
-PyAPI_FUNC(double) PyFloat_Unpack2(const char *p, int le);
-PyAPI_FUNC(double) PyFloat_Unpack4(const char *p, int le);
-PyAPI_FUNC(double) PyFloat_Unpack8(const char *p, int le);
+#endif
+#endif /* !Py_FLOATOBJECT_H */

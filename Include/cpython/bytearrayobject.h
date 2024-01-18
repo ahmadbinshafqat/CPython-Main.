@@ -1,34 +1,44 @@
-#ifndef Py_CPYTHON_BYTEARRAYOBJECT_H
-#  error "this header file must not be included directly"
+/* ByteArray object interface */
+
+#ifndef Py_BYTEARRAYOBJECT_H
+#define Py_BYTEARRAYOBJECT_H
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-/* Object layout */
-typedef struct {
-    PyObject_VAR_HEAD
-    Py_ssize_t ob_alloc;   /* How many bytes allocated in ob_bytes */
-    char *ob_bytes;        /* Physical backing buffer */
-    char *ob_start;        /* Logical start inside ob_bytes */
-    Py_ssize_t ob_exports; /* How many buffer exports */
-} PyByteArrayObject;
+/* Type PyByteArrayObject represents a mutable array of bytes.
+ * The Python API is that of a sequence;
+ * the bytes are mapped to ints in [0, 256).
+ * Bytes are not characters; they may be used to encode characters.
+ * The only way to go between bytes and str/unicode is via encoding
+ * and decoding.
+ * For the convenience of C programmers, the bytes type is considered
+ * to contain a char pointer, not an unsigned char pointer.
+ */
 
-PyAPI_DATA(char) _PyByteArray_empty_string[];
+/* Type object */
+PyAPI_DATA(PyTypeObject) PyByteArray_Type;
+PyAPI_DATA(PyTypeObject) PyByteArrayIter_Type;
 
-/* Macros and static inline functions, trading safety for speed */
-#define _PyByteArray_CAST(op) \
-    (assert(PyByteArray_Check(op)), _Py_CAST(PyByteArrayObject*, op))
+/* Type check macros */
+#define PyByteArray_Check(self) PyObject_TypeCheck((self), &PyByteArray_Type)
+#define PyByteArray_CheckExact(self) Py_IS_TYPE((self), &PyByteArray_Type)
 
-static inline char* PyByteArray_AS_STRING(PyObject *op)
-{
-    PyByteArrayObject *self = _PyByteArray_CAST(op);
-    if (Py_SIZE(self)) {
-        return self->ob_start;
-    }
-    return _PyByteArray_empty_string;
+/* Direct API functions */
+PyAPI_FUNC(PyObject *) PyByteArray_FromObject(PyObject *);
+PyAPI_FUNC(PyObject *) PyByteArray_Concat(PyObject *, PyObject *);
+PyAPI_FUNC(PyObject *) PyByteArray_FromStringAndSize(const char *, Py_ssize_t);
+PyAPI_FUNC(Py_ssize_t) PyByteArray_Size(PyObject *);
+PyAPI_FUNC(char *) PyByteArray_AsString(PyObject *);
+PyAPI_FUNC(int) PyByteArray_Resize(PyObject *, Py_ssize_t);
+
+#ifndef Py_LIMITED_API
+#  define Py_CPYTHON_BYTEARRAYOBJECT_H
+#  include "cpython/bytearrayobject.h"
+#  undef Py_CPYTHON_BYTEARRAYOBJECT_H
+#endif
+
+#ifdef __cplusplus
 }
-#define PyByteArray_AS_STRING(self) PyByteArray_AS_STRING(_PyObject_CAST(self))
-
-static inline Py_ssize_t PyByteArray_GET_SIZE(PyObject *op) {
-    PyByteArrayObject *self = _PyByteArray_CAST(op);
-    return Py_SIZE(self);
-}
-#define PyByteArray_GET_SIZE(self) PyByteArray_GET_SIZE(_PyObject_CAST(self))
+#endif
+#endif /* !Py_BYTEARRAYOBJECT_H */

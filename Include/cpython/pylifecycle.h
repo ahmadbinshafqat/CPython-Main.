@@ -1,83 +1,76 @@
-#ifndef Py_CPYTHON_PYLIFECYCLE_H
-#  error "this header file must not be included directly"
+
+/* Interfaces to configure, query, create & destroy the Python runtime */
+
+#ifndef Py_PYLIFECYCLE_H
+#define Py_PYLIFECYCLE_H
+#ifdef __cplusplus
+extern "C" {
 #endif
-
-/* Py_FrozenMain is kept out of the Limited API until documented and present
-   in all builds of Python */
-PyAPI_FUNC(int) Py_FrozenMain(int argc, char **argv);
-
-/* PEP 432 Multi-phase initialization API (Private while provisional!) */
-
-PyAPI_FUNC(PyStatus) Py_PreInitialize(
-    const PyPreConfig *src_config);
-PyAPI_FUNC(PyStatus) Py_PreInitializeFromBytesArgs(
-    const PyPreConfig *src_config,
-    Py_ssize_t argc,
-    char **argv);
-PyAPI_FUNC(PyStatus) Py_PreInitializeFromArgs(
-    const PyPreConfig *src_config,
-    Py_ssize_t argc,
-    wchar_t **argv);
 
 
 /* Initialization and finalization */
+PyAPI_FUNC(void) Py_Initialize(void);
+PyAPI_FUNC(void) Py_InitializeEx(int);
+PyAPI_FUNC(void) Py_Finalize(void);
+#if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x03060000
+PyAPI_FUNC(int) Py_FinalizeEx(void);
+#endif
+PyAPI_FUNC(int) Py_IsInitialized(void);
 
-PyAPI_FUNC(PyStatus) Py_InitializeFromConfig(
-    const PyConfig *config);
-
-// Python 3.8 provisional API (PEP 587)
-PyAPI_FUNC(PyStatus) _Py_InitializeMain(void);
-
-PyAPI_FUNC(int) Py_RunMain(void);
+/* Subinterpreter support */
+PyAPI_FUNC(PyThreadState *) Py_NewInterpreter(void);
+PyAPI_FUNC(void) Py_EndInterpreter(PyThreadState *);
 
 
-PyAPI_FUNC(void) _Py_NO_RETURN Py_ExitStatusException(PyStatus err);
+/* Py_PyAtExit is for the atexit module, Py_AtExit is for low-level
+ * exit functions.
+ */
+PyAPI_FUNC(int) Py_AtExit(void (*func)(void));
 
-PyAPI_FUNC(int) Py_FdIsInteractive(FILE *, const char *);
+PyAPI_FUNC(void) _Py_NO_RETURN Py_Exit(int);
 
-/* --- PyInterpreterConfig ------------------------------------ */
+/* Bootstrap __main__ (defined in Modules/main.c) */
+PyAPI_FUNC(int) Py_Main(int argc, wchar_t **argv);
+PyAPI_FUNC(int) Py_BytesMain(int argc, char **argv);
 
-#define PyInterpreterConfig_DEFAULT_GIL (0)
-#define PyInterpreterConfig_SHARED_GIL (1)
-#define PyInterpreterConfig_OWN_GIL (2)
+/* In pathconfig.c */
+Py_DEPRECATED(3.13) PyAPI_FUNC(wchar_t *) Py_GetProgramName(void);
+Py_DEPRECATED(3.13) PyAPI_FUNC(wchar_t *) Py_GetPythonHome(void);
+Py_DEPRECATED(3.13) PyAPI_FUNC(wchar_t *) Py_GetProgramFullPath(void);
+Py_DEPRECATED(3.13) PyAPI_FUNC(wchar_t *) Py_GetPrefix(void);
+Py_DEPRECATED(3.13) PyAPI_FUNC(wchar_t *) Py_GetExecPrefix(void);
+Py_DEPRECATED(3.13) PyAPI_FUNC(wchar_t *) Py_GetPath(void);
+#ifdef MS_WINDOWS
+int _Py_CheckPython3(void);
+#endif
 
-typedef struct {
-    // XXX "allow_object_sharing"?  "own_objects"?
-    int use_main_obmalloc;
-    int allow_fork;
-    int allow_exec;
-    int allow_threads;
-    int allow_daemon_threads;
-    int check_multi_interp_extensions;
-    int gil;
-} PyInterpreterConfig;
+/* In their own files */
+PyAPI_FUNC(const char *) Py_GetVersion(void);
+PyAPI_FUNC(const char *) Py_GetPlatform(void);
+PyAPI_FUNC(const char *) Py_GetCopyright(void);
+PyAPI_FUNC(const char *) Py_GetCompiler(void);
+PyAPI_FUNC(const char *) Py_GetBuildInfo(void);
 
-#define _PyInterpreterConfig_INIT \
-    { \
-        .use_main_obmalloc = 0, \
-        .allow_fork = 0, \
-        .allow_exec = 0, \
-        .allow_threads = 1, \
-        .allow_daemon_threads = 0, \
-        .check_multi_interp_extensions = 1, \
-        .gil = PyInterpreterConfig_OWN_GIL, \
-    }
+/* Signals */
+typedef void (*PyOS_sighandler_t)(int);
+PyAPI_FUNC(PyOS_sighandler_t) PyOS_getsig(int);
+PyAPI_FUNC(PyOS_sighandler_t) PyOS_setsig(int, PyOS_sighandler_t);
 
-#define _PyInterpreterConfig_LEGACY_INIT \
-    { \
-        .use_main_obmalloc = 1, \
-        .allow_fork = 1, \
-        .allow_exec = 1, \
-        .allow_threads = 1, \
-        .allow_daemon_threads = 1, \
-        .check_multi_interp_extensions = 0, \
-        .gil = PyInterpreterConfig_SHARED_GIL, \
-    }
+#if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x030B0000
+PyAPI_DATA(const unsigned long) Py_Version;
+#endif
 
-PyAPI_FUNC(PyStatus) Py_NewInterpreterFromConfig(
-    PyThreadState **tstate_p,
-    const PyInterpreterConfig *config);
+#if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x030D0000
+PyAPI_FUNC(int) Py_IsFinalizing(void);
+#endif
 
-typedef void (*atexit_datacallbackfunc)(void *);
-PyAPI_FUNC(int) PyUnstable_AtExit(
-        PyInterpreterState *, atexit_datacallbackfunc, void *);
+#ifndef Py_LIMITED_API
+#  define Py_CPYTHON_PYLIFECYCLE_H
+#  include "cpython/pylifecycle.h"
+#  undef Py_CPYTHON_PYLIFECYCLE_H
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* !Py_PYLIFECYCLE_H */

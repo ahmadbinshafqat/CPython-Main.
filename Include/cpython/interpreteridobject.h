@@ -1,11 +1,17 @@
-#ifndef Py_CPYTHON_INTERPRETERIDOBJECT_H
-#  error "this header file must not be included directly"
+#ifndef Py_INTERPRETERIDOBJECT_H
+#define Py_INTERPRETERIDOBJECT_H
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-/* Interpreter ID Object */
+#ifndef Py_LIMITED_API
+#  define Py_CPYTHON_INTERPRETERIDOBJECT_H
+#  include "cpython/interpreteridobject.h"
+#  undef Py_CPYTHON_INTERPRETERIDOBJECT_H
+#endif
 
-PyAPI_DATA(PyTypeObject) PyInterpreterID_Type;
-
-PyAPI_FUNC(PyObject *) PyInterpreterID_New(int64_t);
-PyAPI_FUNC(PyObject *) PyInterpreterState_GetIDObject(PyInterpreterState *);
-PyAPI_FUNC(PyInterpreterState *) PyInterpreterID_LookUp(PyObject *);
+#ifdef __cplusplus
+}
+#endif
+#endif /* !Py_INTERPRETERIDOBJECT_H */

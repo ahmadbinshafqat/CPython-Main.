@@ -1,85 +1,108 @@
-#ifndef Py_CPYTHON_DICTOBJECT_H
-#  error "this header file must not be included directly"
+#ifndef Py_DICTOBJECT_H
+#define Py_DICTOBJECT_H
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-typedef struct _dictkeysobject PyDictKeysObject;
-typedef struct _dictvalues PyDictValues;
+/* Dictionary object type -- mapping from hashable object to object */
 
-/* The ma_values pointer is NULL for a combined table
- * or points to an array of PyObject* for a split table
- */
-typedef struct {
-    PyObject_HEAD
+/* The distribution includes a separate file, Objects/dictnotes.txt,
+   describing explorations into dictionary design and optimization.
+   It covers typical dictionary use patterns, the parameters for
+   tuning dictionaries, and several ideas for possible optimizations.
+*/
 
-    /* Number of items in the dictionary */
-    Py_ssize_t ma_used;
+PyAPI_DATA(PyTypeObject) PyDict_Type;
 
-    /* Dictionary version: globally unique, value change each time
-       the dictionary is modified */
-#ifdef Py_BUILD_CORE
-    uint64_t ma_version_tag;
-#else
-    Py_DEPRECATED(3.12) uint64_t ma_version_tag;
+#define PyDict_Check(op) \
+                 PyType_FastSubclass(Py_TYPE(op), Py_TPFLAGS_DICT_SUBCLASS)
+#define PyDict_CheckExact(op) Py_IS_TYPE((op), &PyDict_Type)
+
+PyAPI_FUNC(PyObject *) PyDict_New(void);
+PyAPI_FUNC(PyObject *) PyDict_GetItem(PyObject *mp, PyObject *key);
+PyAPI_FUNC(PyObject *) PyDict_GetItemWithError(PyObject *mp, PyObject *key);
+PyAPI_FUNC(int) PyDict_SetItem(PyObject *mp, PyObject *key, PyObject *item);
+PyAPI_FUNC(int) PyDict_DelItem(PyObject *mp, PyObject *key);
+PyAPI_FUNC(void) PyDict_Clear(PyObject *mp);
+PyAPI_FUNC(int) PyDict_Next(
+    PyObject *mp, Py_ssize_t *pos, PyObject **key, PyObject **value);
+PyAPI_FUNC(PyObject *) PyDict_Keys(PyObject *mp);
+PyAPI_FUNC(PyObject *) PyDict_Values(PyObject *mp);
+PyAPI_FUNC(PyObject *) PyDict_Items(PyObject *mp);
+PyAPI_FUNC(Py_ssize_t) PyDict_Size(PyObject *mp);
+PyAPI_FUNC(PyObject *) PyDict_Copy(PyObject *mp);
+PyAPI_FUNC(int) PyDict_Contains(PyObject *mp, PyObject *key);
+
+/* PyDict_Update(mp, other) is equivalent to PyDict_Merge(mp, other, 1). */
+PyAPI_FUNC(int) PyDict_Update(PyObject *mp, PyObject *other);
+
+/* PyDict_Merge updates/merges from a mapping object (an object that
+   supports PyMapping_Keys() and PyObject_GetItem()).  If override is true,
+   the last occurrence of a key wins, else the first.  The Python
+   dict.update(other) is equivalent to PyDict_Merge(dict, other, 1).
+*/
+PyAPI_FUNC(int) PyDict_Merge(PyObject *mp,
+                             PyObject *other,
+                             int override);
+
+/* PyDict_MergeFromSeq2 updates/merges from an iterable object producing
+   iterable objects of length 2.  If override is true, the last occurrence
+   of a key wins, else the first.  The Python dict constructor dict(seq2)
+   is equivalent to dict={}; PyDict_MergeFromSeq(dict, seq2, 1).
+*/
+PyAPI_FUNC(int) PyDict_MergeFromSeq2(PyObject *d,
+                                     PyObject *seq2,
+                                     int override);
+
+PyAPI_FUNC(PyObject *) PyDict_GetItemString(PyObject *dp, const char *key);
+PyAPI_FUNC(int) PyDict_SetItemString(PyObject *dp, const char *key, PyObject *item);
+PyAPI_FUNC(int) PyDict_DelItemString(PyObject *dp, const char *key);
+
+#if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x030D0000
+// Return the object from dictionary *op* which has a key *key*.
+// - If the key is present, set *result to a new strong reference to the value
+//   and return 1.
+// - If the key is missing, set *result to NULL and return 0 .
+// - On error, raise an exception and return -1.
+PyAPI_FUNC(int) PyDict_GetItemRef(PyObject *mp, PyObject *key, PyObject **result);
+PyAPI_FUNC(int) PyDict_GetItemStringRef(PyObject *mp, const char *key, PyObject **result);
 #endif
 
-    PyDictKeysObject *ma_keys;
+#if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 >= 0x030A0000
+PyAPI_FUNC(PyObject *) PyObject_GenericGetDict(PyObject *, void *);
+#endif
 
-    /* If ma_values is NULL, the table is "combined": keys and values
-       are stored in ma_keys.
+/* Dictionary (keys, values, items) views */
 
-       If ma_values is not NULL, the table is split:
-       keys are stored in ma_keys and values are stored in ma_values */
-    PyDictValues *ma_values;
-} PyDictObject;
+PyAPI_DATA(PyTypeObject) PyDictKeys_Type;
+PyAPI_DATA(PyTypeObject) PyDictValues_Type;
+PyAPI_DATA(PyTypeObject) PyDictItems_Type;
 
-PyAPI_FUNC(PyObject *) _PyDict_GetItem_KnownHash(PyObject *mp, PyObject *key,
-                                                 Py_hash_t hash);
-PyAPI_FUNC(PyObject *) _PyDict_GetItemStringWithError(PyObject *, const char *);
-PyAPI_FUNC(PyObject *) PyDict_SetDefault(
-    PyObject *mp, PyObject *key, PyObject *defaultobj);
+#define PyDictKeys_Check(op) PyObject_TypeCheck((op), &PyDictKeys_Type)
+#define PyDictValues_Check(op) PyObject_TypeCheck((op), &PyDictValues_Type)
+#define PyDictItems_Check(op) PyObject_TypeCheck((op), &PyDictItems_Type)
+/* This excludes Values, since they are not sets. */
+# define PyDictViewSet_Check(op) \
+    (PyDictKeys_Check(op) || PyDictItems_Check(op))
 
-/* Get the number of items of a dictionary. */
-static inline Py_ssize_t PyDict_GET_SIZE(PyObject *op) {
-    PyDictObject *mp;
-    assert(PyDict_Check(op));
-    mp = _Py_CAST(PyDictObject*, op);
-    return mp->ma_used;
+/* Dictionary (key, value, items) iterators */
+
+PyAPI_DATA(PyTypeObject) PyDictIterKey_Type;
+PyAPI_DATA(PyTypeObject) PyDictIterValue_Type;
+PyAPI_DATA(PyTypeObject) PyDictIterItem_Type;
+
+PyAPI_DATA(PyTypeObject) PyDictRevIterKey_Type;
+PyAPI_DATA(PyTypeObject) PyDictRevIterItem_Type;
+PyAPI_DATA(PyTypeObject) PyDictRevIterValue_Type;
+
+
+#ifndef Py_LIMITED_API
+#  define Py_CPYTHON_DICTOBJECT_H
+#  include "cpython/dictobject.h"
+#  undef Py_CPYTHON_DICTOBJECT_H
+#endif
+
+#ifdef __cplusplus
 }
-#define PyDict_GET_SIZE(op) PyDict_GET_SIZE(_PyObject_CAST(op))
-
-PyAPI_FUNC(int) PyDict_ContainsString(PyObject *mp, const char *key);
-
-PyAPI_FUNC(PyObject *) _PyDict_NewPresized(Py_ssize_t minused);
-
-PyAPI_FUNC(int) PyDict_Pop(PyObject *dict, PyObject *key, PyObject **result);
-PyAPI_FUNC(int) PyDict_PopString(PyObject *dict, const char *key, PyObject **result);
-PyAPI_FUNC(PyObject *) _PyDict_Pop(PyObject *dict, PyObject *key, PyObject *default_value);
-
-/* Dictionary watchers */
-
-#define PY_FOREACH_DICT_EVENT(V) \
-    V(ADDED)                     \
-    V(MODIFIED)                  \
-    V(DELETED)                   \
-    V(CLONED)                    \
-    V(CLEARED)                   \
-    V(DEALLOCATED)
-
-typedef enum {
-    #define PY_DEF_EVENT(EVENT) PyDict_EVENT_##EVENT,
-    PY_FOREACH_DICT_EVENT(PY_DEF_EVENT)
-    #undef PY_DEF_EVENT
-} PyDict_WatchEvent;
-
-// Callback to be invoked when a watched dict is cleared, dealloced, or modified.
-// In clear/dealloc case, key and new_value will be NULL. Otherwise, new_value will be the
-// new value for key, NULL if key is being deleted.
-typedef int(*PyDict_WatchCallback)(PyDict_WatchEvent event, PyObject* dict, PyObject* key, PyObject* new_value);
-
-// Register/unregister a dict-watcher callback
-PyAPI_FUNC(int) PyDict_AddWatcher(PyDict_WatchCallback callback);
-PyAPI_FUNC(int) PyDict_ClearWatcher(int watcher_id);
-
-// Mark given dictionary as "watched" (callback will be called if it is modified)
-PyAPI_FUNC(int) PyDict_Watch(int watcher_id, PyObject* dict);
-PyAPI_FUNC(int) PyDict_Unwatch(int watcher_id, PyObject* dict);
+#endif
+#endif /* !Py_DICTOBJECT_H */

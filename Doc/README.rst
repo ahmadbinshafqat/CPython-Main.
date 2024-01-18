@@ -1,244 +1,138 @@
-This is Python version 3.13.0 alpha 3
-=====================================
+Python Documentation README
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. image:: https://github.com/python/cpython/workflows/Tests/badge.svg
-   :alt: CPython build status on GitHub Actions
-   :target: https://github.com/python/cpython/actions
+This directory contains the reStructuredText (reST) sources to the Python
+documentation.  You don't need to build them yourself, `prebuilt versions are
+available <https://docs.python.org/dev/download.html>`_.
 
-.. image:: https://dev.azure.com/python/cpython/_apis/build/status/Azure%20Pipelines%20CI?branchName=main
-   :alt: CPython build status on Azure DevOps
-   :target: https://dev.azure.com/python/cpython/_build/latest?definitionId=4&branchName=main
-
-.. image:: https://img.shields.io/badge/discourse-join_chat-brightgreen.svg
-   :alt: Python Discourse chat
-   :target: https://discuss.python.org/
+Documentation on authoring Python documentation, including information about
+both style and markup, is available in the "`Documenting Python
+<https://devguide.python.org/documenting/>`_" chapter of the
+developers guide.
 
 
-Copyright © 2001-2024 Python Software Foundation.  All rights reserved.
+Building the docs
+=================
 
-See the end of this file for further copyright and license information.
+The documentation is built with several tools which are not included in this
+tree but are maintained separately and are available from
+`PyPI <https://pypi.org/>`_.
 
-.. contents::
+* `Sphinx <https://pypi.org/project/Sphinx/>`_
+* `blurb <https://pypi.org/project/blurb/>`_
+* `python-docs-theme <https://pypi.org/project/python-docs-theme/>`_
 
-General Information
--------------------
+The easiest way to install these tools is to create a virtual environment and
+install the tools into there.
 
-- Website: https://www.python.org
-- Source code: https://github.com/python/cpython
-- Issue tracker: https://github.com/python/cpython/issues
-- Documentation: https://docs.python.org
-- Developer's Guide: https://devguide.python.org/
-
-Contributing to CPython
------------------------
-
-For more complete instructions on contributing to CPython development,
-see the `Developer Guide`_.
-
-.. _Developer Guide: https://devguide.python.org/
-
-Using Python
-------------
-
-Installable Python kits, and information about using Python, are available at
-`python.org`_.
-
-.. _python.org: https://www.python.org/
-
-Build Instructions
-------------------
-
-On Unix, Linux, BSD, macOS, and Cygwin::
-
-    ./configure
-    make
-    make test
-    sudo make install
-
-This will install Python as ``python3``.
-
-You can pass many options to the configure script; run ``./configure --help``
-to find out more.  On macOS case-insensitive file systems and on Cygwin,
-the executable is called ``python.exe``; elsewhere it's just ``python``.
-
-Building a complete Python installation requires the use of various
-additional third-party libraries, depending on your build platform and
-configure options.  Not all standard library modules are buildable or
-useable on all platforms.  Refer to the
-`Install dependencies <https://devguide.python.org/getting-started/setup-building.html#build-dependencies>`_
-section of the `Developer Guide`_ for current detailed information on
-dependencies for various Linux distributions and macOS.
-
-On macOS, there are additional configure and build options related
-to macOS framework and universal builds.  Refer to `Mac/README.rst
-<https://github.com/python/cpython/blob/main/Mac/README.rst>`_.
-
-On Windows, see `PCbuild/readme.txt
-<https://github.com/python/cpython/blob/main/PCbuild/readme.txt>`_.
-
-To build Windows installer, see `Tools/msi/README.txt
-<https://github.com/python/cpython/blob/main/Tools/msi/README.txt>`_.
-
-If you wish, you can create a subdirectory and invoke configure from there.
-For example::
-
-    mkdir debug
-    cd debug
-    ../configure --with-pydebug
-    make
-    make test
-
-(This will fail if you *also* built at the top-level directory.  You should do
-a ``make clean`` at the top-level first.)
-
-To get an optimized build of Python, ``configure --enable-optimizations``
-before you run ``make``.  This sets the default make targets up to enable
-Profile Guided Optimization (PGO) and may be used to auto-enable Link Time
-Optimization (LTO) on some platforms.  For more details, see the sections
-below.
-
-Profile Guided Optimization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-PGO takes advantage of recent versions of the GCC or Clang compilers.  If used,
-either via ``configure --enable-optimizations`` or by manually running
-``make profile-opt`` regardless of configure flags, the optimized build
-process will perform the following steps:
-
-The entire Python directory is cleaned of temporary files that may have
-resulted from a previous compilation.
-
-An instrumented version of the interpreter is built, using suitable compiler
-flags for each flavor. Note that this is just an intermediary step.  The
-binary resulting from this step is not good for real-life workloads as it has
-profiling instructions embedded inside.
-
-After the instrumented interpreter is built, the Makefile will run a training
-workload.  This is necessary in order to profile the interpreter's execution.
-Note also that any output, both stdout and stderr, that may appear at this step
-is suppressed.
-
-The final step is to build the actual interpreter, using the information
-collected from the instrumented one.  The end result will be a Python binary
-that is optimized; suitable for distribution or production installation.
-
-
-Link Time Optimization
-^^^^^^^^^^^^^^^^^^^^^^
-
-Enabled via configure's ``--with-lto`` flag.  LTO takes advantage of the
-ability of recent compiler toolchains to optimize across the otherwise
-arbitrary ``.o`` file boundary when building final executables or shared
-libraries for additional performance gains.
-
-
-What's New
+Using make
 ----------
 
-We have a comprehensive overview of the changes in the `What's New in Python
-3.13 <https://docs.python.org/3.13/whatsnew/3.13.html>`_ document.  For a more
-detailed change log, read `Misc/NEWS
-<https://github.com/python/cpython/tree/main/Misc/NEWS.d>`_, but a full
-accounting of changes can only be gleaned from the `commit history
-<https://github.com/python/cpython/commits/main>`_.
+To get started on UNIX, you can create a virtual environment and build
+documentation with the commands::
 
-If you want to install multiple versions of Python, see the section below
-entitled "Installing multiple versions".
+  make venv
+  make html
 
+The virtual environment in the ``venv`` directory will contain all the tools
+necessary to build the documentation downloaded and installed from PyPI.
+If you'd like to create the virtual environment in a different location,
+you can specify it using the ``VENVDIR`` variable.
 
-Documentation
--------------
+You can also skip creating the virtual environment altogether, in which case
+the Makefile will look for instances of ``sphinx-build`` and ``blurb``
+installed on your process ``PATH`` (configurable with the ``SPHINXBUILD`` and
+``BLURB`` variables).
 
-`Documentation for Python 3.13 <https://docs.python.org/3.13/>`_ is online,
-updated daily.
+On Windows, we try to emulate the Makefile as closely as possible with a
+``make.bat`` file. If you need to specify the Python interpreter to use,
+set the PYTHON environment variable.
 
-It can also be downloaded in many formats for faster access.  The documentation
-is downloadable in HTML, PDF, and reStructuredText formats; the latter version
-is primarily for documentation authors, translators, and people with special
-formatting requirements.
+Available make targets are:
 
-For information about building Python's documentation, refer to `Doc/README.rst
-<https://github.com/python/cpython/blob/main/Doc/README.rst>`_.
+* "clean", which removes all build files and the virtual environment.
 
+* "clean-venv", which removes the virtual environment directory.
 
-Converting From Python 2.x to 3.x
----------------------------------
+* "venv", which creates a virtual environment with all necessary tools
+  installed.
 
-Significant backward incompatible changes were made for the release of Python
-3.0, which may cause programs written for Python 2 to fail when run with Python
-3.  For more information about porting your code from Python 2 to Python 3, see
-the `Porting HOWTO <https://docs.python.org/3/howto/pyporting.html>`_.
+* "html", which builds standalone HTML files for offline viewing.
 
+* "htmlview", which re-uses the "html" builder, but then opens the main page
+  in your default web browser.
 
-Testing
--------
+* "htmlhelp", which builds HTML files and a HTML Help project file usable to
+  convert them into a single Compiled HTML (.chm) file -- these are popular
+  under Microsoft Windows, but very handy on every platform.
 
-To test the interpreter, type ``make test`` in the top-level directory.  The
-test set produces some output.  You can generally ignore the messages about
-skipped tests due to optional features which can't be imported.  If a message
-is printed about a failed test or a traceback or core dump is produced,
-something is wrong.
+  To create the CHM file, you need to run the Microsoft HTML Help Workshop
+  over the generated project (.hhp) file.  The make.bat script does this for
+  you on Windows.
 
-By default, tests are prevented from overusing resources like disk space and
-memory.  To enable these tests, run ``make buildbottest``.
+* "latex", which builds LaTeX source files as input to "pdflatex" to produce
+  PDF documents.
 
-If any tests fail, you can re-run the failing test(s) in verbose mode.  For
-example, if ``test_os`` and ``test_gdb`` failed, you can run::
+* "text", which builds a plain text file for each source file.
 
-    make test TESTOPTS="-v test_os test_gdb"
+* "epub", which builds an EPUB document, suitable to be viewed on e-book
+  readers.
 
-If the failure persists and appears to be a problem with Python rather than
-your environment, you can `file a bug report
-<https://github.com/python/cpython/issues>`_ and include relevant output from
-that command to show the issue.
+* "linkcheck", which checks all external references to see whether they are
+  broken, redirected or malformed, and outputs this information to stdout as
+  well as a plain-text (.txt) file.
 
-See `Running & Writing Tests <https://devguide.python.org/testing/run-write-tests.html>`_
-for more on running tests.
+* "changes", which builds an overview over all versionadded/versionchanged/
+  deprecated items in the current version. This is meant as a help for the
+  writer of the "What's New" document.
 
-Installing multiple versions
-----------------------------
+* "coverage", which builds a coverage overview for standard library modules and
+  C API.
 
-On Unix and Mac systems if you intend to install multiple versions of Python
-using the same installation prefix (``--prefix`` argument to the configure
-script) you must take care that your primary python executable is not
-overwritten by the installation of a different version.  All files and
-directories installed using ``make altinstall`` contain the major and minor
-version and can thus live side-by-side.  ``make install`` also creates
-``${prefix}/bin/python3`` which refers to ``${prefix}/bin/python3.X``.  If you
-intend to install multiple versions using the same prefix you must decide which
-version (if any) is your "primary" version.  Install that version using
-``make install``.  Install all other versions using ``make altinstall``.
+* "pydoc-topics", which builds a Python module containing a dictionary with
+  plain text documentation for the labels defined in
+  ``tools/pyspecific.py`` -- pydoc needs these to show topic and keyword help.
 
-For example, if you want to install Python 2.7, 3.6, and 3.13 with 3.13 being the
-primary version, you would execute ``make install`` in your 3.13 build directory
-and ``make altinstall`` in the others.
+* "check", which checks for frequent markup errors.
+
+* "serve", which serves the build/html directory on port 8000.
+
+* "dist", (Unix only) which creates distributable archives of HTML, text,
+  PDF, and EPUB builds.
 
 
-Release Schedule
-----------------
+Without make
+------------
 
-See :pep:`719` for Python 3.13 release details.
+First, install the tool dependencies from PyPI.
+
+Then, from the ``Doc`` directory, run ::
+
+   sphinx-build -b<builder> . build/<builder>
+
+where ``<builder>`` is one of html, text, latex, or htmlhelp (for explanations
+see the make targets above).
+
+Deprecation header
+==================
+
+You can define the ``outdated`` variable in ``html_context`` to show a
+red banner on each page redirecting to the "latest" version.
+
+The link points to the same page on ``/3/``, sadly for the moment the
+language is lost during the process.
 
 
-Copyright and License Information
----------------------------------
+Contributing
+============
 
+Bugs in the content should be reported to the
+`Python bug tracker <https://github.com/python/cpython/issues>`_.
 
-Copyright © 2001-2024 Python Software Foundation.  All rights reserved.
+Bugs in the toolset should be reported to the tools themselves.
 
-Copyright © 2000 BeOpen.com.  All rights reserved.
+You can also send a mail to the Python Documentation Team at docs@python.org,
+and we will process your request as soon as possible.
 
-Copyright © 1995-2001 Corporation for National Research Initiatives.  All
-rights reserved.
-
-Copyright © 1991-1995 Stichting Mathematisch Centrum.  All rights reserved.
-
-See the `LICENSE <https://github.com/python/cpython/blob/main/LICENSE>`_ for
-information on the history of this software, terms & conditions for usage, and a
-DISCLAIMER OF ALL WARRANTIES.
-
-This Python distribution contains *no* GNU General Public License (GPL) code,
-so it may be used in proprietary projects.  There are interfaces to some GNU
-code but these are entirely optional.
-
-All trademarks referenced herein are property of their respective holders.
+If you want to help the Documentation Team, you are always welcome.  Just send
+a mail to docs@python.org.
